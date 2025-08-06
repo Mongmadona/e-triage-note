@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Triage Note - บันทึกข้อมูลผู้ป่วย</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background-color: #eaffd0;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    header {
+      background-color: #a8e063;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      border-radius: 0 0 20px 20px;
+    }
+
+    main {
+      padding: 1rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .note-form {
+      background-color: #fff;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin: 1rem 0;
+    }
+
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    textarea,
+    input[type="text"],
+    input[type="date"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-family: 'Prompt', sans-serif;
+    }
+
+    textarea {
+      resize: none;
+      min-height: 80px;
+    }
+
+    .submit-btn,
+    .reset-btn,
+    .delete-btn,
+    .scroll-top-btn,
+    .export-btn {
+      background-color: #a8e063;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      margin: 0.5rem 0.5rem 0 0;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+
+    .submit-btn:hover,
+    .reset-btn:hover,
+    .delete-btn:hover,
+    .scroll-top-btn:hover,
+    .export-btn:hover {
+      background-color: #8cd03a;
+    }
+
+    .notes-list {
+      margin-top: 2rem;
+    }
+
+    .note {
+      background-color: #fff;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .note h3 {
+      margin: 0 0 0.5rem;
+      color: #a8e063;
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .search-bar input {
+      flex-grow: 1;
+      min-width: 150px;
+    }
+
+    .scroll-top-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      color: #777;
+    }
+
+    @media (max-width: 600px) {
+      main {
+        padding: 0.5rem;
+      }
+      .note-form,
+      .note {
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    E-Triage Note - บันทึกข้อมูลผู้ป่วย
+  </header>
+  <main>
+    <form class="note-form">
+      <label for="date">วันที่:</label>
+      <input type="date" id="date" name="date" required>
+      
+      <label for="patient-name">ชื่อผู้ป่วย:</label>
+      <input type="text" id="patient-name" name="patient-name" required placeholder="ระบุชื่อผู้ป่วย">
+
+      <label for="q1">1. อาการหลักของผู้ป่วย:</label>
+      <textarea id="q1" rows="3" required></textarea>
+
+      <label for="q2">2. ระดับความรุนแรง (เช่น ต่ำ, ปานกลาง, สูง):</label>
+      <textarea id="q2" rows="3" required></textarea>
+
+      <label for="q3">3. การรักษาเบื้องต้นที่ดำเนินการ:</label>
+      <textarea id="q3" rows="3" required></textarea>
+
+      <label for="q4">4. สถานะปัจจุบันของผู้ป่วย:</label>
+      <textarea id="q4" rows="3" required></textarea>
+
+      <label for="q5">5. บันทึกเพิ่มเติมหรือข้อควรปรับปรุง:</label>
+      <textarea id="q5" rows="3" required></textarea>
+
+      <div>
+        <button type="submit" class="submit-btn">บันทึก</button>
+        <button type="reset" class="reset-btn">ล้างฟอร์ม</button>
+        <button type="button" class="export-btn" onclick="exportToCSV()">ส่งออกเป็น CSV</button>
+      </div>
+    </form>
+
+    <div class="search-bar">
+      <input type="date" id="search-date" placeholder="ค้นหาตามวันที่">
+      <input type="text" id="search-patient" placeholder="ค้นหาตามชื่อผู้ป่วย">
+      <button onclick="searchNotes()" class="submit-btn">ค้นหา</button>
+    </div>
+
+    <div class="notes-list"></div>
+  </main>
+  <button class="scroll-top-btn" onclick="scrollToTop()">↑ กลับด้านบน</button>
+  <footer>
+    &copy; 2025 E-Triage Note
+  </footer>
+
+  <script>
+    // ตั้งค่าวันที่ปัจจุบัน
+    document.getElementById("date").value = new Date().toISOString().split("T")[0];
+
+    // ปรับขนาด textarea อัตโนมัติ
+    document.querySelectorAll("textarea").forEach(textarea => {
+      textarea.addEventListener("input", function () {
+        this.style.height = "auto";
+        this.style.height = `${this.scrollHeight}px`;
+      });
+    });
+
+    // ฟังก์ชันบันทึกข้อมูล
+    document.querySelector(".note-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const date = document.getElementById("date").value;
+      const patientName = document.getElementById("patient-name").value;
+      const q1 = document.getElementById("q1").value;
+      const q2 = document.getElementById("q2").value;
+      const q3 = document.getElementById("q3").value;
+      const q4 = document.getElementById("q4").value;
+      const q5 = document.getElementById("q5").value;
+
+      if (!date || !patientName || !q1 || !q2 || !q3 || !q4 || !q5) {
+        alert("กรุณากรอกข้อมูลให้ครบทุกช่อง!");
+        return;
+      }
+
+      const note = { date, patientName, q1, q2, q3, q4, q5 };
+      let notes = JSON.parse(localStorage.getItem("notes")) || [];
+      notes.push(note);
+      localStorage.setItem("notes", JSON.stringify(notes));
+
+      alert("บันทึกเรียบร้อย!");
+      this.reset();
+      document.getElementById("date").value = new Date().toISOString().split("T")[0];
+      displayNotes();
+    });
+
+    // ฟังก์ชันแสดงบันทึก
+    function displayNotes(filteredNotes = null) {
+      const notesList = document.querySelector(".notes-list");
+      notesList.innerHTML = "";
+      let notes = filteredNotes || JSON.parse(localStorage.getItem("notes")) || [];
+
+      notes.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      notes.forEach((note, index) => {
+        const noteDiv = document.createElement("div");
+        noteDiv.className = "note";
+        noteDiv.innerHTML = `
+          <h3>วันที่: ${new Date(note.date).toLocaleDateString("th-TH", {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+          })} | ผู้ป่วย: ${note.patientName}</h3>
+          <p><strong>1. อาการหลัก:</strong> ${note.q1}</p>
+          <p><strong>2. ระดับความรุนแรง:</strong> ${note.q2}</p>
+          <p><strong>3. การรักษาเบื้องต้น:</strong> ${note.q3}</p>
+          <p><strong>4. สถานะปัจจุบัน:</strong> ${note.q4}</p>
+          <p><strong>5. บันทึกเพิ่มเติม:</strong> ${note.q5}</p>
+          <button class="delete-btn" onclick="deleteNote(${index})">ลบบันทึก</button>
+        `;
+        notesList.appendChild(noteDiv);
+      });
+    }
+
+    // ฟังก์ชันลบบันทึก
+    function deleteNote(index) {
+      if (confirm("คุณแน่ใจหรือไม่ว่าต้องการลบบันทึกนี้?")) {
+        let notes = JSON.parse(localStorage.getItem("notes")) || [];
+        notes.splice(index, 1);
+        localStorage.setItem("notes", JSON.stringify(notes));
+        displayNotes();
+      }
+    }
+
+    // ฟังก์ชันค้นหาบันทึก
+    function searchNotes() {
+      const searchDate = document.getElementById("search-date").value;
+      const searchPatient = document.getElementById("search-patient").value.toLowerCase();
+      let notes = JSON.parse(localStorage.getItem("notes")) || [];
+
+      if (searchDate) {
+        notes = notes.filter(note => note.date === searchDate);
+      }
+      if (searchPatient) {
+        notes = notes.filter(note => note.patientName.toLowerCase().includes(searchPatient));
+      }
+
+      displayNotes(notes);
+    }
+
+    // ฟังก์ชันส่งออกเป็น CSV
+    function exportToCSV() {
+      let notes = JSON.parse(localStorage.getItem("notes")) || [];
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "วันที่,ชื่อผู้ป่วย,อาการหลัก,ระดับความรุนแรง,การรักษาเบื้องต้น,สถานะปัจจุบัน,บันทึกเพิ่มเติม\n";
+      notes.forEach(note => {
+        csvContent += `${note.date},${note.patientName},${note.q1.replace(/,/g, ";")},${note.q2.replace(/,/g, ";")},${note.q3.replace(/,/g, ";")},${note.q4.replace(/,/g, ";")},${note.q5.replace(/,/g, ";")}\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "patient_notes.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // ฟังก์ชันเลื่อนไปด้านบน
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // แสดงปุ่มเลื่อนไปด้านบนเมื่อเลื่อนลง
+    window.addEventListener("scroll", function () {
+      const scrollBtn = document.querySelector(".scroll-top-btn");
+      scrollBtn.style.display = window.scrollY > 300 ? "block" : "none";
+    });
+
+    // โหลดบันทึกเมื่อเริ่มต้น
+    document.addEventListener("DOMContentLoaded", () => displayNotes());
+  </script>
+</body>
+</html>
